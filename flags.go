@@ -1,7 +1,5 @@
 package atlas_sdk
 
-import "fmt"
-
 // flags consts
 const (
 	flagURL      = "--url"
@@ -18,11 +16,4 @@ const (
 type flag struct {
 	Flag  string
 	Value string
-}
-
-func (f *flag) String() string {
-	if f.Value == "" {
-		return f.Flag
-	}
-	return fmt.Sprintf(`%s "%s"`, f.Flag, f.Value)
 }
