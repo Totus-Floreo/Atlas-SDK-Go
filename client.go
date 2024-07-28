@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net/url"
-	"os/exec"
 )
 
 // entrypoint to Atlas cli
@@ -273,22 +272,4 @@ func (c *AtlasClient) SchemaApply(opts SchemaApplyOptions) error {
 
 	// Execution of command
 	return c.exec()
-}
-
-// exec executes a command using the specified entrypoint, command, and action.
-// It writes the combined output of the command to the provided buffer and returns an error if any.
-func (c *AtlasClient) exec() error {
-	cmd := exec.Command(c.entrypoint, c.command, c.action)
-	for _, arg := range c.args {
-		cmd.Args = append(cmd.Args, arg.Flag)
-		if arg.Value != "" {
-			cmd.Args = append(cmd.Args, arg.Value)
-		}
-	}
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return err
-	}
-	c.buf.Write(output)
-	return nil
 }

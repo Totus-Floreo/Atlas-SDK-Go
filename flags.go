@@ -21,5 +21,8 @@ type flag struct {
 }
 
 func (f *flag) String() string {
+	if f.Value == "" {
+		return f.Flag
+	}
 	return fmt.Sprintf(`%s "%s"`, f.Flag, f.Value)
 }
