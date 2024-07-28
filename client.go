@@ -100,9 +100,9 @@ func (c *AtlasClient) SchemaInspect(opts SchemaInspectOptions) error {
 // SchemaDiffOptions contains the optional and required parameters needed
 // for comparing the schema within the target database.
 //
-// FromURLs: A list of URLs to the current state - it can be a database URL, an HCL or SQL schema, or a migration directory - mandatory.
+// CurrentURLs[FromURLs]: A list of URLs to the current state - it can be a database URL, an HCL or SQL schema, or a migration directory - mandatory.
 //
-// ToURLs: A list of URLs to the desired state - it can be a database URL, an HCL or SQL schema, or a migration directory - mandatory.
+// DesiredURLs[ToURLs]: A list of URLs to the desired state - it can be a database URL, an HCL or SQL schema, or a migration directory - mandatory.
 //
 // DevURL: A URL to the development database.
 //
@@ -114,12 +114,12 @@ func (c *AtlasClient) SchemaInspect(opts SchemaInspectOptions) error {
 //
 // !Unsupported! Web: (optional) - visualize the schema diff as an ERD on Atlas Cloud.
 type SchemaDiffOptions struct {
-	FromURLs []*url.URL
-	ToURLs   []*url.URL
-	DevURL   *url.URL
-	Schemas  []string
-	Exclude  []string
-	Format   Format
+	CurrentURLs []*url.URL
+	DesiredURLs []*url.URL
+	DevURL      *url.URL
+	Schemas     []string
+	Exclude     []string
+	Format      Format
 	//Web      bool
 }
 
@@ -128,7 +128,7 @@ type SchemaDiffOptions struct {
 // It writes the output to the provided buffer and returns any errors encountered.
 func (c *AtlasClient) SchemaDiff(opts SchemaDiffOptions) error {
 	// Error check for required parameters
-	if len(opts.FromURLs) == 0 || len(opts.ToURLs) == 0 || opts.DevURL == nil {
+	if len(opts.CurrentURLs) == 0 || len(opts.DesiredURLs) == 0 || opts.DevURL == nil {
 		return fmt.Errorf("FromURLs, ToURLs and DevURL in SchemaDiffOptions must be defined")
 	}
 
@@ -137,15 +137,15 @@ func (c *AtlasClient) SchemaDiff(opts SchemaDiffOptions) error {
 	c.action = actionDiff
 
 	// create args slice
-	cmdArgs := make([]flag, 0, 2+len(opts.FromURLs)+len(opts.ToURLs)+len(opts.Schemas)+len(opts.Exclude))
+	cmdArgs := make([]flag, 0, 2+len(opts.CurrentURLs)+len(opts.DesiredURLs)+len(opts.Schemas)+len(opts.Exclude))
 
 	// args.FromURLs
-	for _, fromURL := range opts.FromURLs {
+	for _, fromURL := range opts.CurrentURLs {
 		cmdArgs = append(cmdArgs, flag{flagFromURL, fromURL.String()})
 	}
 
 	// args.ToURLs
-	for _, toURL := range opts.ToURLs {
+	for _, toURL := range opts.DesiredURLs {
 		cmdArgs = append(cmdArgs, flag{flagToURL, toURL.String()})
 	}
 
@@ -188,7 +188,7 @@ func (c *AtlasClient) SchemaDiff(opts SchemaDiffOptions) error {
 // - ToURLs: A list of URLs to the desired state. It can be a database URL, an HCL or SQL schema,
 // or a migration directory - mandatory.
 //
-// DevURL: A URL to the Dev-Database - optional.
+// DevURL: A URL to the Dev-Database.
 //
 // Schemas: (optional, may be supplied multiple times) - Schemas to inspect within the target database.
 //
@@ -200,14 +200,14 @@ func (c *AtlasClient) SchemaDiff(opts SchemaDiffOptions) error {
 //
 // DryRun: (optional) - To skip the execution of the SQL queries against the target database, users may provide the --dry-run flag.
 type SchemaApplyOptions struct {
-	URL      *url.URL
-	ToURLs   []*url.URL
-	DevURL   *url.URL
-	Schemas  []string
-	Exclude  []string
-	Format   Format
-	Approval bool
-	DryRun   bool
+	CurrentURL  *url.URL
+	DesiredURLs []*url.URL
+	DevURL      *url.URL
+	Schemas     []string
+	Exclude     []string
+	Format      Format
+	Approval    bool
+	DryRun      bool
 }
 
 // SchemaApply applies the desired schema changes to the target database using the specified options.
@@ -215,7 +215,7 @@ type SchemaApplyOptions struct {
 // It writes the output to the provided buffer and returns an error, if any.
 func (c *AtlasClient) SchemaApply(opts SchemaApplyOptions) error {
 	// Error check for required parameters
-	if opts.URL == nil || len(opts.ToURLs) == 0 || opts.DevURL == nil {
+	if opts.CurrentURL == nil || len(opts.DesiredURLs) == 0 || opts.DevURL == nil {
 		return fmt.Errorf("URL, ToURLs and DevURL in SchemaApplyOptions must be defined")
 	}
 
@@ -224,13 +224,13 @@ func (c *AtlasClient) SchemaApply(opts SchemaApplyOptions) error {
 	c.action = actionApply
 
 	// create args slice
-	cmdArgs := make([]flag, 0, 5+len(opts.ToURLs)+len(opts.Schemas)+len(opts.Exclude))
+	cmdArgs := make([]flag, 0, 5+len(opts.DesiredURLs)+len(opts.Schemas)+len(opts.Exclude))
 
 	// args.URL
-	cmdArgs = append(cmdArgs, flag{flagURL, opts.URL.String()})
+	cmdArgs = append(cmdArgs, flag{flagURL, opts.CurrentURL.String()})
 
 	// args.ToURLs
-	for _, toURL := range opts.ToURLs {
+	for _, toURL := range opts.DesiredURLs {
 		cmdArgs = append(cmdArgs, flag{flagToURL, toURL.String()})
 	}
 
