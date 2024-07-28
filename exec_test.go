@@ -4,7 +4,6 @@ package atlas_sdk
 
 import (
 	"os/exec"
-	"strconv"
 )
 
 func (c *AtlasClient) exec() error {
@@ -12,7 +11,7 @@ func (c *AtlasClient) exec() error {
 	for _, arg := range c.args {
 		cmd.Args = append(cmd.Args, arg.Flag)
 		if arg.Value != "" {
-			cmd.Args = append(cmd.Args, strconv.Quote(arg.Value))
+			cmd.Args = append(cmd.Args, arg.Value)
 		}
 	}
 	c.buf.WriteString(cmd.String())
