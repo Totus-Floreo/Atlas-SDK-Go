@@ -159,6 +159,9 @@ type SchemaApplyOptions struct {
 	DryRun   bool       // (optional) In order to skip the execution of the SQL queries against the target database, users may provide the --dry-run flag.
 }
 
+// SchemaApply applies the desired schema changes to the target database using the specified options.
+//
+// It returns the output as a byte slice and an error, if any.
 func (c *AtlasClient) SchemaApply(opts SchemaApplyOptions) ([]byte, error) {
 	// Error check for required parameters
 	if opts.URL == nil || len(opts.ToURLs) == 0 {
