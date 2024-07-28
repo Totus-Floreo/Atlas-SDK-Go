@@ -4,10 +4,15 @@ import "fmt"
 
 // flags consts
 const (
-	flagURL     = "--url"
-	flagSchema  = "--schema"
-	flagExclude = "--exclude"
-	flagFormat  = "--format"
+	flagURL      = "--url"
+	flagSchema   = "--schema"
+	flagExclude  = "--exclude"
+	flagFormat   = "--format"
+	flagFromURL  = "--from"
+	flagToURL    = "--to"
+	flagDevURL   = "--dev-url"
+	flagApproval = "--auto-approve"
+	flagDryRun   = "--dry-run"
 )
 
 type flag struct {
