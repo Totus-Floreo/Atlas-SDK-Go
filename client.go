@@ -1,6 +1,7 @@
 package atlas_sdk
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
 	"os/exec"
@@ -13,6 +14,7 @@ const (
 
 // AtlasClient is a type that represents a client for interacting with the Atlas CLI.
 type AtlasClient struct {
+	buf        *bytes.Buffer
 	entrypoint string
 	command    string
 	action     string
@@ -21,30 +23,44 @@ type AtlasClient struct {
 
 // NewClient creates a new instance of AtlasClient with the specified entrypoint.
 // The returned AtlasClient can be used to perform various operations.
+//
 // Returns:
 //
 //	*AtlasClient: A new instance of AtlasClient with the specified entrypoint.
-func NewClient() *AtlasClient {
+func NewClient(buffer *bytes.Buffer) *AtlasClient {
 	return &AtlasClient{
+		buf:        buffer,
 		entrypoint: entrypoint,
 	}
 }
 
+// SchemaInspectOptions contains the optional and required parameters needed
+// to inspect the schema of the target database.
+//
+// URL: URL of the database to be inspected - mandatory.
+//
+// Schemas: (optional, may be supplied multiple times) - List of schemas to be inspected within the target database.
+//
+// Exclude: (optional) - Filter out resources matching the given glob pattern.
+//
+// Format: (optional) - Go template used to format the output.
+//
+// !Unsupported! Web: (optional) - visualize the schema as an ERD on Atlas Cloud.
 type SchemaInspectOptions struct {
 	URL     *url.URL
-	Schemas []string // (optional, may be supplied multiple times) - schemas to inspect within the target database.
-	Exclude string   // (optional) - filter out resources matching the given glob pattern.
-	Format  Format   // (optional) - Go template to use to format the output.
-	//Web     bool     // !Unsupported! (optional) - visualize the schema as an ERD on Atlas Cloud.
+	Schemas []string
+	Exclude string
+	Format  Format
+	//Web     bool
 }
 
 // SchemaInspect inspects the schema within the target database using the specified options.
 //
-// It returns the output as a byte slice and an error, if any.
-func (c *AtlasClient) SchemaInspect(opts SchemaInspectOptions) ([]byte, error) {
+// It writes the output to the provided buffer and returns an error, if any.
+func (c *AtlasClient) SchemaInspect(opts SchemaInspectOptions) error {
 	// Error check for required parameters
 	if opts.URL == nil {
-		return nil, fmt.Errorf("URL in SchemaInspectOptions must be defined")
+		return fmt.Errorf("URL in SchemaInspectOptions must be defined")
 	}
 
 	// sets command and action
@@ -81,23 +97,39 @@ func (c *AtlasClient) SchemaInspect(opts SchemaInspectOptions) ([]byte, error) {
 	return c.exec()
 }
 
+// SchemaDiffOptions contains the optional and required parameters needed
+// for comparing the schema within the target database.
+//
+// FromURLs: A list of URLs to the current state - it can be a database URL, an HCL or SQL schema, or a migration directory - mandatory.
+//
+// ToURLs: A list of URLs to the desired state - it can be a database URL, an HCL or SQL schema, or a migration directory - mandatory.
+//
+// DevURL: A URL to the development database.
+//
+// Schemas: (optional, may be supplied multiple times) - List of schemas to inspect within the target database.
+//
+// Exclude: (optional, may be supplied multiple times) - Filter out resources matching the given glob pattern.
+//
+// Format: (optional) - Go template used to format the output.
+//
+// !Unsupported! Web: (optional) - visualize the schema diff as an ERD on Atlas Cloud.
 type SchemaDiffOptions struct {
-	FromURLs []*url.URL // a list of URLs to the current state: can be a database URL, an HCL or SQL schema, or a migration directory.
-	ToURLs   []*url.URL // a list of URLs to the desired state: can be a database URL, an HCL or SQL schema, or a migration directory.
-	DevURL   *url.URL   // (optional) a URL to the Dev-Database.
-	Schemas  []string   // (optional, may be supplied multiple times) - schemas to inspect within the target database.
-	Exclude  []string   // (optional, may be supplied multiple times) - filter out resources matching the given glob pattern.
-	Format   Format     // (optional) - Go template to use to format the output.
-	//Web      bool       // !Unsupported! (-w accepted as well) - visualize the schema diff as an ERD on Atlas Cloud.
+	FromURLs []*url.URL
+	ToURLs   []*url.URL
+	DevURL   *url.URL
+	Schemas  []string
+	Exclude  []string
+	Format   Format
+	//Web      bool
 }
 
 // SchemaDiff compares the schema within the target database using the specified options.
 //
-// It returns the output as a byte slice and any errors encountered.
-func (c *AtlasClient) SchemaDiff(opts SchemaDiffOptions) ([]byte, error) {
+// It writes the output to the provided buffer and returns any errors encountered.
+func (c *AtlasClient) SchemaDiff(opts SchemaDiffOptions) error {
 	// Error check for required parameters
-	if len(opts.FromURLs) == 0 || len(opts.ToURLs) == 0 {
-		return nil, fmt.Errorf("FromURLs, ToURLs in SchemaDiffOptions must be defined")
+	if len(opts.FromURLs) == 0 || len(opts.ToURLs) == 0 || opts.DevURL == nil {
+		return fmt.Errorf("FromURLs, ToURLs and DevURL in SchemaDiffOptions must be defined")
 	}
 
 	// sets command and action
@@ -148,24 +180,43 @@ func (c *AtlasClient) SchemaDiff(opts SchemaDiffOptions) ([]byte, error) {
 	return c.exec()
 }
 
+// SchemaApplyOptions contains the optional and required parameters needed
+// to apply the desired schema changes to the target database.
+//
+// - URL: URL of the database to be inspected - mandatory.
+//
+// - ToURLs: A list of URLs to the desired state. It can be a database URL, an HCL or SQL schema,
+// or a migration directory - mandatory.
+//
+// DevURL: A URL to the Dev-Database - optional.
+//
+// Schemas: (optional, may be supplied multiple times) - Schemas to inspect within the target database.
+//
+// Exclude: (optional, may be supplied multiple times) - This helps to filter out resources matching the given glob pattern.
+//
+// Format: (optional) - This is a Go template used to format the output.
+//
+// Approval: (optional) - If users wish to automatically approve, they may run the schema apply command with the --auto-approve flag.
+//
+// DryRun: (optional) - To skip the execution of the SQL queries against the target database, users may provide the --dry-run flag.
 type SchemaApplyOptions struct {
-	URL      *url.URL   // URL of the database to be inspected.
-	ToURLs   []*url.URL // a list of URLs to the desired state: can be a database URL, an HCL or SQL schema, or a migration directory.
-	DevURL   *url.URL   // (optional) a URL to the Dev-Database.
-	Schemas  []string   // (optional, may be supplied multiple times) - schemas to inspect within the target database.
-	Exclude  []string   // (optional, may be supplied multiple times) - filter out resources matching the given glob pattern.
-	Format   Format     // (optional) - Go template to use to format the output.
-	Approval bool       // (optional) Users that wish to automatically approve may run the schema apply command with the --auto-approve flag.
-	DryRun   bool       // (optional) In order to skip the execution of the SQL queries against the target database, users may provide the --dry-run flag.
+	URL      *url.URL
+	ToURLs   []*url.URL
+	DevURL   *url.URL
+	Schemas  []string
+	Exclude  []string
+	Format   Format
+	Approval bool
+	DryRun   bool
 }
 
 // SchemaApply applies the desired schema changes to the target database using the specified options.
 //
-// It returns the output as a byte slice and an error, if any.
-func (c *AtlasClient) SchemaApply(opts SchemaApplyOptions) ([]byte, error) {
+// It writes the output to the provided buffer and returns an error, if any.
+func (c *AtlasClient) SchemaApply(opts SchemaApplyOptions) error {
 	// Error check for required parameters
-	if opts.URL == nil || len(opts.ToURLs) == 0 {
-		return nil, fmt.Errorf("URL and ToURLs in SchemaApplyOptions must be defined")
+	if opts.URL == nil || len(opts.ToURLs) == 0 || opts.DevURL == nil {
+		return fmt.Errorf("URL, ToURLs and DevURL in SchemaApplyOptions must be defined")
 	}
 
 	// sets command and action
@@ -225,8 +276,8 @@ func (c *AtlasClient) SchemaApply(opts SchemaApplyOptions) ([]byte, error) {
 }
 
 // exec executes a command using the specified entrypoint, command, and action.
-// It returns the combined output of the command as a byte slice and an error if any.
-func (c *AtlasClient) exec() ([]byte, error) {
+// It writes the combined output of the command to the provided buffer and returns an error if any.
+func (c *AtlasClient) exec() error {
 	cmd := exec.Command(c.entrypoint, c.command, c.action)
 	for _, arg := range c.args {
 		cmd.Args = append(cmd.Args, arg.Flag)
@@ -234,5 +285,10 @@ func (c *AtlasClient) exec() ([]byte, error) {
 			cmd.Args = append(cmd.Args, arg.Value)
 		}
 	}
-	return cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+	c.buf.Write(output)
+	return nil
 }
